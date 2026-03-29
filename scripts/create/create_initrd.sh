@@ -150,7 +150,6 @@ then
         modules.alias \
         modules.builtin \
         modules.builtin.modinfo \
-        modules.dep \
         modules.devname \
         modules.order \
         modules.softdep \
@@ -206,7 +205,7 @@ then
 
     echo "Trimming module info files..."
     rm -f "${INITRD_MODULES_VER_PATH}"/modules.alias.new
-    rm -f "${INITRD_MODULES_VER_PATH}"/modules.dep.new
+    rm -f "${INITRD_MODULES_VER_PATH}"/modules.dep*
     rm -f "${INITRD_MODULES_VER_PATH}"/modules.order.new
 
     for i in $(grep -v "^#" "${INITRD_MODULES_VER_PATH}/modules.alias" | cut -d ' ' -f 3- | sort | uniq)
@@ -218,16 +217,6 @@ then
     done
 
     mv "${INITRD_MODULES_VER_PATH}/modules.alias.new" "${INITRD_MODULES_VER_PATH}/modules.alias"
-
-    for i in $(cat "${INITRD_MODULES_VER_PATH}/modules.dep" | cut -d ':' -f 1)
-    do
-        if [ -f "${INITRD_MODULES_VER_PATH}/$i" ]
-        then
-            grep "$i:" "${INITRD_MODULES_VER_PATH}/modules.dep" >> "${INITRD_MODULES_VER_PATH}/modules.dep.new"
-        fi
-    done
-
-    mv "${INITRD_MODULES_VER_PATH}/modules.dep.new" "${INITRD_MODULES_VER_PATH}/modules.dep"
 
     for i in $(cat "${INITRD_MODULES_VER_PATH}/modules.order")
     do

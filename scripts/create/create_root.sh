@@ -127,7 +127,6 @@ then
         modules.alias \
         modules.builtin \
         modules.builtin.modinfo \
-        modules.dep \
         modules.devname \
         modules.order \
         modules.softdep \
@@ -215,7 +214,7 @@ then
 
     echo "Trimming module info files..."
     rm -f "${ROOT_MODULES_VER_PATH}"/modules.alias.new
-    rm -f "${ROOT_MODULES_VER_PATH}"/modules.dep.new
+    rm -f "${ROOT_MODULES_VER_PATH}"/modules.dep*
     rm -f "${ROOT_MODULES_VER_PATH}"/modules.order.new
 
     for i in $(grep -v "^#" "${ROOT_MODULES_VER_PATH}/modules.alias" | cut -d ' ' -f 3- | sort | uniq)
@@ -227,16 +226,6 @@ then
     done
 
     mv "${ROOT_MODULES_VER_PATH}/modules.alias.new" "${ROOT_MODULES_VER_PATH}/modules.alias"
-
-    for i in $(cat "${ROOT_MODULES_VER_PATH}/modules.dep" | cut -d ':' -f 1)
-    do
-        if [ -f "${ROOT_MODULES_VER_PATH}/$i" ]
-        then
-            grep "$i:" "${ROOT_MODULES_VER_PATH}/modules.dep" >> "${ROOT_MODULES_VER_PATH}/modules.dep.new"
-        fi
-    done
-
-    mv "${ROOT_MODULES_VER_PATH}/modules.dep.new" "${ROOT_MODULES_VER_PATH}/modules.dep"
 
     for i in $(cat "${ROOT_MODULES_VER_PATH}/modules.order")
     do
