@@ -1,0 +1,116 @@
+#!/bin/busybox sh
+
+rescue()
+{
+    echo "Dropping to rescue shell"
+    /bin/busybox sh
+    exit
+}
+
+try()
+{
+    echo "$1"
+    eval "$2" || { echo "fail: $3"; rescue; }
+    echo "ok"
+}
+
+checkedmp()
+{
+    try "Attempting to load module $1..." "modprobe $1" "can't find $1 module"
+}
+
+trymount()
+{
+    OARG=""
+    if [ -n "$4" ]
+    then
+        OARG="-o $4"
+    fi
+    mkdir -p "$3"
+    try "Mounting $3..." "mount ${OARG} -t $1 $2 $3" "cannot mount $3"
+}
+
+trydir()
+{
+    try "Making dir $1" "mkdir -p $1" "couldn't make dir $1"
+}
+
+trydirs()
+{
+    for dir in $@
+    do
+        trydir "$dir"
+    done
+}
+
+trymount devtmpfs none /dev
+trymount proc none /proc
+trymount sysfs none /sys
+
+DRIVERS_DONE=""
+echo "Loading drivers..."
+FIRST=1
+DID_AT_LEAST_ONE=0
+while [ "${DID_AT_LEAST_ONE}" -eq 1 ] || [ "${FIRST}" -eq 1 ]
+do
+    DID_AT_LEAST_ONE=0
+    if [ "${FIRST}" -eq 1 ]
+    then
+        FIRST=0
+    fi
+    for i in $(grep MODALIAS /sys/bus/*/devices/*/uevent | cut -d = -f 2 | sort | uniq)
+    do
+        if ! echo "${DRIVERS_DONE}" | grep -q "$i"
+        then
+            modprobe "$i" 2> /dev/null
+            DRIVERS_DONE="${DRIVERS_DONE} $i"
+            DID_AT_LEAST_ONE=1
+        fi
+    done
+    sleep 1
+done
+sleep 5
+checkedmp loop
+checkedmp squashfs
+checkedmp overlay
+checkedmp cdrom
+checkedmp sr_mod
+checkedmp isofs
+checkedmp zram
+echo "done"
+
+UPPER_DIR="/mnt/upper"
+CDROM_DIR="/mnt/cdrom"
+SQUASH_DIR="/mnt/squash"
+NEWROOT_DIR="/mnt/newroot"
+
+trydirs "${UPPER_DIR}" "${CDROM_DIR}" "${SQUASH_DIR}" "${NEWROOT_DIR}"
+
+TOTAL_MEM="$(echo $(grep MemTotal /proc/meminfo) | cut -f 2 -d ' ')"
+if [ -z "${TOTAL_MEM}" ]
+then
+    echo "Cannot determine memory size"
+    TOTAL_MEM="65536"
+fi
+UPPER_FS="tmpfs"
+UPPER_DEV="none"
+UPPER_MOUNT_OPTS="size=${TOTAL_MEM}K"
+ZRAM_SIZE="$(expr "${TOTAL_MEM}" '*' '2')K"
+ZRAM_MAX_MEM="$(expr "${TOTAL_MEM}" '-' "$(expr "${TOTAL_MEM}" '/' '20')")K"
+ZRAM_DEV="zram0"
+
+try "Setting ${ZRAM_DEV} size to ${ZRAM_SIZE}..." "echo ${ZRAM_SIZE} > /sys/block/${ZRAM_DEV}/disksize" "couldn't set ${ZRAM_DEV} size"
+try "Setting ${ZRAM_DEV} max mem to ${ZRAM_MAX_MEM}..." "echo ${ZRAM_MAX_MEM} > /sys/block/${ZRAM_DEV}/mem_limit" "couldn't size ${ZRAM_DEV} max mem"
+try "Creating swap on ${ZRAM_DEV}..." "mkswap /dev/${ZRAM_DEV}" "couldn't create swap on ${ZRAM_DEV}"
+try "Mounting ${ZRAM_DEV} as swap" "swapon /dev/${ZRAM_DEV}" "couldn't mount ${ZRAM_DEV} as swap"
+trymount "${UPPER_FS}" "${UPPER_DEV}" "${UPPER_DIR}" "${UPPER_MOUNT_OPTS}"
+trydirs "${UPPER_DIR}/upper" "${UPPER_DIR}/work"
+
+CDROM="sr0"
+trymount iso9660 "/dev/${CDROM}" "/mnt/cdrom" ro
+trymount squashfs "/mnt/cdrom/root.sfs" "/mnt/squash" "ro,loop"
+trymount overlay overlay "/mnt/newroot" "lowerdir=${SQUASH_DIR},upperdir=${UPPER_DIR}/upper,workdir=${UPPER_DIR}/work"
+umount /proc
+umount /sys
+try "Switching root..." "exec switch_root /mnt/newroot /sbin/init" "couldn't switch root"
+
