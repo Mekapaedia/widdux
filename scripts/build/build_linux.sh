@@ -224,13 +224,14 @@ then
     if [ ! -d "${LINUX_PATH}" ]
     then
         echo "Repo doesn't exist, cloning..."
-        git clone "${LINUX_URL}" "${LINUX_PATH}"
+        git clone "${LINUX_URL}" --branch "${LINUX_BRANCH}" --single-branch "${LINUX_PATH}"
     fi
 
     OLD_PWD="${PWD}"
     cd "${LINUX_PATH}"
     echo "Updating Linux repo..."
     git stash
+    git fetch origin "${LINUX_BRANCH}"
     git checkout "${LINUX_BRANCH}"
     git pull --rebase
     git stash pop || true
