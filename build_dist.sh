@@ -30,6 +30,7 @@ no-squash: Don't create squash files (default: do create it)
 no-iso: Don't create iso (default: do create it)
 no-syslinux: Don't get syslinux (default: do get it)
 no-nuke: Don't nuke the build directory (default: do nuke it)
+menuconfig: Run linux menuconfig (default: don't)
 EOF
 }
 
@@ -131,6 +132,7 @@ CREATE_SQUASH=1
 CREATE_ISO=1
 GET_SYSLINUX=1
 EXTRA_ARGS=""
+MENUCONFIG=0
 
 while [ $# -gt 0 ]
 do
@@ -157,6 +159,10 @@ do
             CREATE_SQUASH=0
             CREATE_ISO=0
             GET_SYSLINUX=0
+            shift
+            ;;
+        menuconfig)
+            MENUCONFIG=1
             shift
             ;;
         no-musl)
@@ -270,13 +276,19 @@ cd "${OLD_PWD}"
 if [ "${BUILD_LINUX}" -eq 1 ]
 then
     JUST_INSTALL_ARGS=""
+    MENUCONFIG_ARGS=""
     if [ "${JUST_INSTALL_LINUX}" -eq 1 ]
     then
         JUST_INSTALL_ARGS="no-build"
     fi
+    if [ "${MENUCONFIG}" -eq 1 ]
+    then
+        MENUCONFIG_ARGS="menuconfig"
+    fi
     "${LINUX_BUILD_SCRIPT}" \
         ${EXTRA_ARGS} \
         ${JUST_INSTALL_ARGS} \
+        ${MENUCONFIG_ARGS} \
         CONFIG="${LINUX_CONFIG}" \
         LINUX_PATH="${LINUX_PATH}" \
         LINUX_INSTALL_PATH="${DIST_DISK_ISOLINUX}" \

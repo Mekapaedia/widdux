@@ -58,6 +58,7 @@ INSTALL_KERNEL=1
 INSTALL_HEADERS=1
 INSTALL_MODULES=1
 DO_WORK=1
+MENUCONFIG=0
 EXTRA_ARGS=""
 
 while [ $# -gt 0 ]
@@ -123,6 +124,10 @@ do
             CLEAN_REPOS=1
             CLEAN_BUILD=1
             EXTRA_ARGS="${EXTRA_ARGS} $1"
+            shift
+            ;;
+        menuconfig)
+            MENUCONFIG=1
             shift
             ;;
         CONFIG=*)
@@ -261,6 +266,10 @@ then
     echo "Configuring Linux..."
     cp "${CONFIG}" "${LINUX_CONFIG_PATH}"
     make olddefconfig ARCH="${ARCH}" CROSS_COMPILE="${CROSS_COMPILE}"
+    if [ "${MENUCONFIG}" -eq 1 ]
+    then
+        make menuconfig ARCH="${ARCH}" CROSS_COMPILE="${CROSS_COMPILE}"
+    fi
     echo "Building Linux..."
     make ARCH="${ARCH}" CROSS_COMPILE="${CROSS_COMPILE}" -j"${BUILD_JOBS}"
     cd "${OLD_PWD}"

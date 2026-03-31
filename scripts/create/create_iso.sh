@@ -131,6 +131,7 @@ then
     cp "${SYSLINUX_PATH}/bios/core/isolinux.bin" "${DISK_PATH}/isolinux"
     cp "${SYSLINUX_PATH}/bios/com32/elflink/ldlinux/ldlinux.c32" "${DISK_PATH}/isolinux"
     rm -f "${DISK_PATH}/isolinux/"config*
+    rm -f "${DISK_PATH}/isolinux/"System.map*
     mkisofs -o "${ISO_OUT}" \
         -b isolinux/isolinux.bin \
         -c isolinux/boot.cat \
